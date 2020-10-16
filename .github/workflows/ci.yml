@@ -1,0 +1,43 @@
+name: ci
+on: [push]
+jobs:
+  run-template-tests:
+    runs-on: ubuntu-latest
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres
+        # Provide the password for postgres
+        env:
+          POSTGRES_PASSWORD: pinarlabs
+          POSTGRES_DB: pinarlabs-db
+          POSTGRES_USER: postgres
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Node
+        uses: actions/setup-node@v1
+      - name: Install Dependencies
+        run: npm install
+      - name: Migrate and Run Tests
+        run: npm run db:migrate && npm run test
+        env:
+          DB_HOST: localhost
+          DB_NAME: pinarlabs-db
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: pinarlabs
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
